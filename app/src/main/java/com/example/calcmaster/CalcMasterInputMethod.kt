@@ -18,27 +18,36 @@ import com.example.calcmaster.ui.theme.CalcMasterTheme
 
 class CalcMasterInputMethod : InputMethodService(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
-    private val registryLifecycle by lazy { LifecycleRegistry(this) }
-    private val storeViewModel by lazy { ViewModelStore() }
-    private val controllerSavedState by lazy { SavedStateRegistryController.create(this) }
+    private var registryLifecycle: LifecycleRegistry? = null
+    private var storeViewModel: ViewModelStore? = null
+    private var controllerSavedState: SavedStateRegistryController? = null
 
-    override val lifecycle: Lifecycle 
-        get() = registryLifecycle
+    override val lifecycle: Lifecycle
+        get() = registryLifecycle ?: LifecycleRegistry(this).also { registryLifecycle = it }
 
-    override val viewModelStore: ViewModelStore 
-        get() = storeViewModel
+    override val viewModelStore: ViewModelStore
+        get() = storeViewModel ?: ViewModelStore().also { storeViewModel = it }
 
-    override val savedStateRegistry: SavedStateRegistry 
-        get() = controllerSavedState.savedStateRegistry
+    override val savedStateRegistry: SavedStateRegistry
+        get() = controllerSavedState?.savedStateRegistry ?: run {
+            val controller = SavedStateRegistryController.create(this)
+            controllerSavedState = controller
+            controller.savedStateRegistry
+        }
 
     override fun onCreate() {
         super.onCreate()
-        controllerSavedState.performRestore(null)
-        registryLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        // Inicialización segura del estado interno antes de tocar cualquier vista
+        if (controllerSavedState == null) {
+            controllerSavedState = SavedStateRegistryController.create(this)
+        }
+        controllerSavedState?.performRestore(null)
+        registryLifecycle?.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
     }
 
     override fun onCreateInputView(): View {
         return ComposeView(this).apply {
+            // Vinculamos de forma segura los dueños del árbol de la vista
             setViewTreeLifecycleOwner(this@CalcMasterInputMethod)
             setViewTreeViewModelStoreOwner(this@CalcMasterInputMethod)
             setViewTreeSavedStateRegistryOwner(this@CalcMasterInputMethod)
@@ -59,18 +68,17 @@ class CalcMasterInputMethod : InputMethodService(), LifecycleOwner, ViewModelSto
                 }
             }
         }.also {
-            // 🔥 Fuerza a la interfaz de Compose a inicializar su tamaño y dibujarse
-            registryLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_START)
-            registryLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+            // Activamos el ciclo de vida de manera segura
+            registryLifecycle?.handleLifecycleEvent(Lifecycle.Event.ON_START)
+            registryLifecycle?.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
         }
     }
 
     override fun onDestroy() {
-        // 🛑 Cierra los estados del ciclo de vida en orden inverso
-        registryLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-        registryLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
-        registryLifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        storeViewModel.clear()
+        registryLifecycle?.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        registryLifecycle?.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        registryLifecycle?.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        storeViewModel?.clear()
         super.onDestroy()
     }
 }
