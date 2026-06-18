@@ -14,6 +14,17 @@ import com.example.calcmaster.ui.theme.CalcMasterTheme
 
 class CalcMasterInputMethod : InputMethodService(), ViewModelStoreOwner, SavedStateRegistryOwner {
 
+    // --- AGREGA ESTO PARA SOLUCIONAR EL ERROR ---
+    override val lifecycle: androidx.lifecycle.Lifecycle
+        get() = androidx.lifecycle.LifecycleRegistry(this)
+    // --------------------------------------------
+
+    private val mViewModelStore = ViewModelStore()
+    private val mSavedStateRegistryController = SavedStateRegistryController.create(this)
+    
+    // ... el resto de tu código sigue igual abajo ...
+
+
     private val mViewModelStore = ViewModelStore()
     private val mSavedStateRegistryController = SavedStateRegistryController.create(this)
 
