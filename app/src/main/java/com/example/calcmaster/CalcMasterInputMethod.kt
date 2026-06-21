@@ -54,7 +54,7 @@ class CalcMasterInputMethod : InputMethodService(), LifecycleOwner, ViewModelSto
             
             setContent {
                 CalcMasterTheme {
-                    HeliosSystemKeyboard(
+                    heliosSystemKeyboard(
                         onInputText = { text -> 
                             currentInputConnection?.commitText(text, 1) 
                         },
